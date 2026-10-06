@@ -1,5 +1,5 @@
 === TypeOverride ===
-Contributors:
+Contributors: asavagecreative
 Tags: elementor, typography, fonts, design system, maintenance
 Requires at least: 6.8
 Tested up to: 7.1
