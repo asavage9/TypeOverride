@@ -2,7 +2,7 @@
 /**
  * Elementor data scanner.
  *
- * @package ElementorTypographyManager
+ * @package TypeOverride
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

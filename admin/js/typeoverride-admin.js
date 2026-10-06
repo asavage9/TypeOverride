@@ -1,5 +1,7 @@
-(function () {
+(function (wp) {
 	'use strict';
+
+	var __ = wp.i18n.__;
 
 	function initResetForm() {
 		var form = document.querySelector('[data-etm-reset-form]');
@@ -38,10 +40,10 @@
 			});
 
 			reviewButton.disabled = selected.length === 0;
-			countLabel.textContent = selected.length + (selected.length === 1 ? ' selected' : ' selected');
+			countLabel.textContent = selected.length + ' ' + __('selected', 'typeoverride');
 			helpLabel.textContent = selected.length === 0
-				? 'Select one or more typography properties to continue.'
-				: 'Selected properties are ready to review.';
+				? __('Select one or more typography properties to continue.', 'typeoverride')
+				: __('Selected properties are ready to review.', 'typeoverride');
 
 			reviewList.textContent = '';
 			selected.forEach(function (checkbox) {
@@ -115,4 +117,4 @@
 	} else {
 		initResetForm();
 	}
-}());
+}(window.wp));

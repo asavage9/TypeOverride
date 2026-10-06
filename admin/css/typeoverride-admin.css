@@ -61,6 +61,26 @@
 	padding: 24px 0 20px;
 }
 
+.etm-header-lockup {
+	max-width: 260px;
+	margin: 0 0 10px;
+}
+
+.etm-header-lockup img {
+	display: block;
+	height: auto;
+	max-width: 100%;
+	width: 260px;
+}
+
+#toplevel_page_typeoverride .wp-menu-image img {
+	display: block;
+	height: 20px;
+	margin: 8px auto 0;
+	object-fit: contain;
+	width: 20px;
+}
+
 .etm-header-copy h1 {
 	font-size: 28px;
 	font-weight: 600;
@@ -800,6 +820,11 @@
 	.etm-header-meta {
 		justify-content: flex-start;
 		padding-top: 0;
+	}
+
+	.etm-header-lockup,
+	.etm-header-lockup img {
+		width: 230px;
 	}
 
 	.etm-tabs {

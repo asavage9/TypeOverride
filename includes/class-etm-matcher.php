@@ -2,7 +2,7 @@
 /**
  * Canonical typography setting matcher.
  *
- * @package ElementorTypographyManager
+ * @package TypeOverride
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

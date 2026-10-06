@@ -2,7 +2,7 @@
 /**
  * WordPress admin interface.
  *
- * @package ElementorTypographyManager
+ * @package TypeOverride
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -15,18 +15,6 @@ class ETM_Admin {
 
 	private $version = '0.2.0';
 
-	private $group_labels = array(
-		'font_family'     => 'Font Family',
-		'font_size'       => 'Font Size',
-		'font_weight'     => 'Font Weight',
-		'text_transform'  => 'Text Transform',
-		'font_style'      => 'Font Style',
-		'text_decoration' => 'Text Decoration',
-		'line_height'     => 'Line Height',
-		'letter_spacing'  => 'Letter Spacing',
-		'word_spacing'    => 'Word Spacing',
-	);
-
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
 		add_action( 'admin_init', array( $this, 'handle_actions' ) );
@@ -34,18 +22,21 @@ class ETM_Admin {
 	}
 
 	public function add_menu_page() {
+		$plugin_file = dirname( __DIR__ ) . '/typeoverride.php';
+
 		add_menu_page(
-			'TypeOverride',
-			'TypeOverride',
+			__( 'TypeOverride', 'typeoverride' ),
+			__( 'TypeOverride', 'typeoverride' ),
 			'manage_options',
 			$this->page_slug,
 			array( $this, 'render_page' ),
-			'dashicons-editor-textcolor',
+			plugins_url( 'admin/images/typeoverride-admin-menu.svg', $plugin_file ),
 			80
 		);
 	}
 
 	public function enqueue_assets() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This GET parameter only selects the TypeOverride admin screen.
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 		if ( $this->page_slug !== $page ) {
 			return;
@@ -61,10 +52,11 @@ class ETM_Admin {
 		wp_enqueue_script(
 			'etm-admin',
 			plugins_url( 'admin/js/typeoverride-admin.js', $plugin_file ),
-			array(),
+			array( 'wp-i18n' ),
 			$this->version,
 			true
 		);
+		wp_set_script_translations( 'etm-admin', 'typeoverride', dirname( __DIR__ ) . '/languages' );
 	}
 
 	public function handle_actions() {
@@ -77,30 +69,36 @@ class ETM_Admin {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'typeoverride' ) );
 		}
 
-		$action = isset( $_POST['etm_action'] ) ? sanitize_key( wp_unslash( $_POST['etm_action'] ) ) : '';
-		if ( 'reset_overrides' === $action ) {
+		$request_method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_key( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+		$action         = isset( $_POST['etm_action'] ) ? sanitize_key( wp_unslash( $_POST['etm_action'] ) ) : '';
+		if ( 'post' === $request_method && 'reset_overrides' === $action ) {
+			check_admin_referer( 'etm_reset_action', 'etm_nonce' );
 			$this->process_reset();
 		}
 	}
 
 	private function process_reset() {
-		check_admin_referer( 'etm_reset_action', 'etm_nonce' );
-
 		if ( ! $this->is_elementor_available() ) {
 			$results = array(
 				'modified_docs' => 0,
 				'reset_count'   => 0,
-				'errors'        => array( 'Elementor is unavailable. No reset was performed.' ),
+				'errors'        => array( __( 'Elementor is unavailable. No reset was performed.', 'typeoverride' ) ),
 			);
 			set_transient( 'etm_reset_result', $results, MINUTE_IN_SECONDS );
 			wp_safe_redirect( $this->page_url( 'reset', array( 'reset' => 'completed' ) ) );
 			exit;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- The reset nonce is verified in handle_actions before this method runs; scalar values are filtered and sanitized immediately below.
 		$submitted_groups = isset( $_POST['reset_groups'] ) ? wp_unslash( $_POST['reset_groups'] ) : array();
+		$submitted_groups = array_filter(
+			(array) $submitted_groups,
+			'is_string'
+		);
+		$submitted_groups = array_map( 'sanitize_key', $submitted_groups );
 		$selected_groups = array_values(
 			array_intersect(
-				array_map( 'sanitize_key', (array) $submitted_groups ),
+				$submitted_groups,
 				array_keys( ETM_Matcher::get_groups() )
 			)
 		);
@@ -109,7 +107,7 @@ class ETM_Admin {
 			$results = array(
 				'modified_docs' => 0,
 				'reset_count'   => 0,
-				'errors'        => array( 'No valid typography groups were selected.' ),
+				'errors'        => array( __( 'No valid typography groups were selected.', 'typeoverride' ) ),
 			);
 			set_transient( 'etm_reset_result', $results, MINUTE_IN_SECONDS );
 			wp_safe_redirect( $this->page_url( 'reset', array( 'reset' => 'completed' ) ) );
@@ -127,6 +125,7 @@ class ETM_Admin {
 				'post_type'      => 'any',
 				'post_status'    => array( 'publish', 'pending', 'draft', 'future', 'private' ),
 				'posts_per_page' => -1,
+				'no_found_rows'  => true,
 				'meta_query'     => array(
 					array(
 						'key'     => '_elementor_data',
@@ -144,7 +143,8 @@ class ETM_Admin {
 			$result = ETM_Resetter::reset_document( $post->ID, $selected_groups );
 			if ( ! $result['success'] ) {
 				$results['errors'][] = sprintf(
-					'Doc ID %d: %s',
+					/* translators: 1: document ID, 2: error message. */
+					__( 'Doc ID %1$d: %2$s', 'typeoverride' ),
 					(int) $post->ID,
 					$result['error']
 				);
@@ -167,6 +167,7 @@ class ETM_Admin {
 	}
 
 	public function render_page() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This GET parameter only selects the TypeOverride tab.
 		$current_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'audit';
 		if ( ! in_array( $current_tab, array( 'audit', 'reset' ), true ) ) {
 			$current_tab = 'audit';
@@ -186,9 +187,9 @@ class ETM_Admin {
 			endif;
 			?>
 
-			<nav class="etm-tabs" aria-label="TypeOverride sections">
-				<a href="<?php echo esc_url( $this->page_url( 'audit' ) ); ?>" class="etm-tab <?php echo 'audit' === $current_tab ? 'is-active' : ''; ?>" <?php echo 'audit' === $current_tab ? 'aria-current="page"' : ''; ?>>Audit</a>
-				<a href="<?php echo esc_url( $this->page_url( 'reset' ) ); ?>" class="etm-tab <?php echo 'reset' === $current_tab ? 'is-active' : ''; ?>" <?php echo 'reset' === $current_tab ? 'aria-current="page"' : ''; ?>>Reset Overrides</a>
+			<nav class="etm-tabs" aria-label="<?php echo esc_attr__( 'TypeOverride sections', 'typeoverride' ); ?>">
+				<a href="<?php echo esc_url( $this->page_url( 'audit' ) ); ?>" class="etm-tab <?php echo 'audit' === $current_tab ? 'is-active' : ''; ?>" <?php echo 'audit' === $current_tab ? 'aria-current="page"' : ''; ?>><?php echo esc_html__( 'Audit', 'typeoverride' ); ?></a>
+				<a href="<?php echo esc_url( $this->page_url( 'reset' ) ); ?>" class="etm-tab <?php echo 'reset' === $current_tab ? 'is-active' : ''; ?>" <?php echo 'reset' === $current_tab ? 'aria-current="page"' : ''; ?>><?php echo esc_html__( 'Reset Overrides', 'typeoverride' ); ?></a>
 			</nav>
 
 			<main class="etm-content">
@@ -205,27 +206,38 @@ class ETM_Admin {
 	}
 
 	private function render_header( $elementor_available ) {
-		$status_label = $elementor_available ? 'Elementor detected' : 'Elementor unavailable';
+		$plugin_file = dirname( __DIR__ ) . '/typeoverride.php';
+		$lockup_url  = plugins_url( 'admin/images/typeoverride-lockup-horizontal.svg', $plugin_file );
+		$status_label = $elementor_available ? __( 'Elementor detected', 'typeoverride' ) : __( 'Elementor unavailable', 'typeoverride' );
 		$status_class = $elementor_available ? 'is-ready' : 'is-unavailable';
+		$version_label = sprintf(
+			/* translators: %s: plugin version. */
+			__( 'v%s', 'typeoverride' ),
+			$this->version
+		);
 		?>
 		<header class="etm-header">
 			<div class="etm-header-copy">
-				<p class="etm-eyebrow">Elementor typography utility</p>
-				<h1>TypeOverride</h1>
-				<p class="etm-subtitle">Find and reset local typography overrides in Elementor.</p>
+				<p class="etm-eyebrow"><?php echo esc_html__( 'Elementor typography utility', 'typeoverride' ); ?></p>
+				<div class="etm-header-lockup">
+					<img src="<?php echo esc_url( $lockup_url ); ?>" alt="" aria-hidden="true">
+					<h1 class="screen-reader-text"><?php echo esc_html__( 'TypeOverride', 'typeoverride' ); ?></h1>
+				</div>
+				<p class="etm-subtitle"><?php echo esc_html__( 'Find and reset local typography overrides in Elementor.', 'typeoverride' ); ?></p>
 			</div>
-			<div class="etm-header-meta" aria-label="TypeOverride status">
+			<div class="etm-header-meta" aria-label="<?php echo esc_attr__( 'TypeOverride status', 'typeoverride' ); ?>">
 				<span class="etm-status <?php echo esc_attr( $status_class ); ?>">
 					<span class="etm-status-dot" aria-hidden="true"></span>
 					<?php echo esc_html( $status_label ); ?>
 				</span>
-				<span class="etm-version">v<?php echo esc_html( $this->version ); ?></span>
+				<span class="etm-version"><?php echo esc_html( $version_label ); ?></span>
 			</div>
 		</header>
 		<?php
 	}
 
 	private function render_reset_notice() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This GET parameter only selects a transient result view.
 		if ( ! isset( $_GET['reset'] ) || 'completed' !== sanitize_key( wp_unslash( $_GET['reset'] ) ) ) {
 			return;
 		}
@@ -239,13 +251,13 @@ class ETM_Admin {
 		$has_changes = (int) $result['reset_count'] > 0;
 		if ( ! $has_errors ) {
 			$state   = 'success';
-			$heading = 'Typography overrides reset successfully';
+			$heading = __( 'Typography overrides reset successfully', 'typeoverride' );
 		} elseif ( $has_changes ) {
 			$state   = 'warning';
-			$heading = 'Reset completed with skipped items';
+			$heading = __( 'Reset completed with skipped items', 'typeoverride' );
 		} else {
 			$state   = 'error';
-			$heading = 'Reset could not complete';
+			$heading = __( 'Reset could not complete', 'typeoverride' );
 		}
 		?>
 		<section class="etm-result etm-result-<?php echo esc_attr( $state ); ?>" role="<?php echo 'error' === $state ? 'alert' : 'status'; ?>">
@@ -253,25 +265,25 @@ class ETM_Admin {
 			<div class="etm-result-body">
 				<h2><?php echo esc_html( $heading ); ?></h2>
 				<?php if ( $has_errors && $has_changes ) : ?>
-					<p>Completed changes are listed below. Review the skipped or failed items before trying again.</p>
+					<p><?php echo esc_html__( 'Completed changes are listed below. Review the skipped or failed items before trying again.', 'typeoverride' ); ?></p>
 				<?php elseif ( $has_errors ) : ?>
-					<p>No documents were modified. Review the reported items before trying again.</p>
+					<p><?php echo esc_html__( 'No documents were modified. Review the reported items before trying again.', 'typeoverride' ); ?></p>
 				<?php else : ?>
-					<p>Selected local values were cleared so Elementor can use its available default or global inheritance.</p>
+					<p><?php echo esc_html__( 'Selected local values were cleared so Elementor can use its available default or global inheritance.', 'typeoverride' ); ?></p>
 				<?php endif; ?>
-				<div class="etm-result-metrics" aria-label="Reset results">
-					<div><span>Documents modified</span><strong><?php echo (int) $result['modified_docs']; ?></strong></div>
-					<div><span>Overrides reset</span><strong><?php echo (int) $result['reset_count']; ?></strong></div>
+				<div class="etm-result-metrics" aria-label="<?php echo esc_attr__( 'Reset results', 'typeoverride' ); ?>">
+					<div><span><?php echo esc_html__( 'Documents modified', 'typeoverride' ); ?></span><strong><?php echo (int) $result['modified_docs']; ?></strong></div>
+					<div><span><?php echo esc_html__( 'Overrides reset', 'typeoverride' ); ?></span><strong><?php echo (int) $result['reset_count']; ?></strong></div>
 				</div>
 				<?php if ( $has_errors ) : ?>
-					<h3>Skipped or failed items</h3>
+					<h3><?php echo esc_html__( 'Skipped or failed items', 'typeoverride' ); ?></h3>
 					<ul>
 						<?php foreach ( $result['errors'] as $error ) : ?>
 							<li><?php echo esc_html( $error ); ?></li>
 						<?php endforeach; ?>
 					</ul>
 				<?php endif; ?>
-				<p class="etm-result-footnote">If cached styles remain, regenerate Elementor files/data from Elementor Tools.</p>
+				<p class="etm-result-footnote"><?php echo esc_html__( 'If cached styles remain, regenerate Elementor files/data from Elementor Tools.', 'typeoverride' ); ?></p>
 			</div>
 		</section>
 		<?php
@@ -283,9 +295,9 @@ class ETM_Admin {
 		<section class="etm-panel etm-state etm-state-unavailable" role="status" aria-labelledby="etm-dependency-title">
 			<div class="etm-state-icon" aria-hidden="true">!</div>
 			<div>
-				<p class="etm-eyebrow">Dependency check</p>
-				<h2 id="etm-dependency-title">Elementor is unavailable</h2>
-				<p>TypeOverride requires Elementor to inspect typography overrides. Activate Elementor, then return here to run an audit or reset.</p>
+				<p class="etm-eyebrow"><?php echo esc_html__( 'Dependency check', 'typeoverride' ); ?></p>
+				<h2 id="etm-dependency-title"><?php echo esc_html__( 'Elementor is unavailable', 'typeoverride' ); ?></h2>
+				<p><?php echo esc_html__( 'TypeOverride requires Elementor to inspect typography overrides. Activate Elementor, then return here to run an audit or reset.', 'typeoverride' ); ?></p>
 			</div>
 		</section>
 		<?php
@@ -293,19 +305,29 @@ class ETM_Admin {
 
 	private function render_audit_tab() {
 		$audit = $this->collect_audit_results();
+		$skipped_message = sprintf(
+			/* translators: %d: number of skipped documents. */
+			_n( '%d document could not be inspected safely, so it was left unchanged.', '%d documents could not be inspected safely, so they were left unchanged.', (int) $audit['skipped_count'], 'typeoverride' ),
+			(int) $audit['skipped_count']
+		);
+		$affected_documents_label = sprintf(
+			/* translators: %d: number of affected documents. */
+			_n( '%d document', '%d documents', (int) $audit['docs_affected'], 'typeoverride' ),
+			(int) $audit['docs_affected']
+		);
 		?>
 		<section class="etm-intro" aria-labelledby="etm-audit-title">
-			<p class="etm-eyebrow">Audit</p>
-			<h2 id="etm-audit-title">What is overriding my global typography?</h2>
-			<p>Review explicit local typography values across Elementor documents before deciding what to reset.</p>
+			<p class="etm-eyebrow"><?php echo esc_html__( 'Audit', 'typeoverride' ); ?></p>
+			<h2 id="etm-audit-title"><?php echo esc_html__( 'What is overriding my global typography?', 'typeoverride' ); ?></h2>
+			<p><?php echo esc_html__( 'Review explicit local typography values across Elementor documents before deciding what to reset.', 'typeoverride' ); ?></p>
 		</section>
 
 		<?php if ( $audit['skipped_count'] > 0 ) : ?>
 			<section class="etm-state etm-state-warning" role="status" aria-labelledby="etm-audit-warning-title">
 				<div class="etm-state-icon" aria-hidden="true">!</div>
 				<div>
-					<h2 id="etm-audit-warning-title">Audit completed with skipped items</h2>
-					<p><?php echo (int) $audit['skipped_count']; ?> document(s) could not be inspected safely, so they were left unchanged.</p>
+					<h2 id="etm-audit-warning-title"><?php echo esc_html__( 'Audit completed with skipped items', 'typeoverride' ); ?></h2>
+					<p><?php echo esc_html( $skipped_message ); ?></p>
 					<ul>
 						<?php foreach ( $audit['skipped_docs'] as $skipped ) : ?>
 							<li><?php echo esc_html( $skipped['title'] ); ?> (ID <?php echo (int) $skipped['id']; ?>): <?php echo esc_html( $skipped['reason'] ); ?></li>
@@ -318,35 +340,35 @@ class ETM_Admin {
 		<?php if ( empty( $audit['documents'] ) ) : ?>
 			<section class="etm-panel etm-empty-state" role="status">
 				<div class="etm-empty-icon" aria-hidden="true">✓</div>
-				<h2>No local typography overrides found</h2>
-				<p><?php echo $audit['skipped_count'] > 0 ? 'No overrides were found in the documents that completed the audit.' : 'Elementor typography in the audited content is already inheriting its available global/default settings.'; ?></p>
+				<h2><?php echo esc_html__( 'No local typography overrides found', 'typeoverride' ); ?></h2>
+				<p><?php echo esc_html( $audit['skipped_count'] > 0 ? __( 'No overrides were found in the documents that completed the audit.', 'typeoverride' ) : __( 'Elementor typography in the audited content is already inheriting its available global/default settings.', 'typeoverride' ) ); ?></p>
 			</section>
 			<?php
 			return;
 		endif;
 		?>
 
-		<section class="etm-summary" aria-label="Audit summary">
+		<section class="etm-summary" aria-label="<?php echo esc_attr__( 'Audit summary', 'typeoverride' ); ?>">
 			<div class="etm-summary-grid <?php echo $audit['skipped_count'] > 0 ? 'has-attention' : 'two-columns'; ?>">
 				<div class="etm-stat">
-					<span class="etm-stat-label">Affected Documents</span>
+					<span class="etm-stat-label"><?php echo esc_html__( 'Affected Documents', 'typeoverride' ); ?></span>
 					<strong class="etm-stat-value"><?php echo (int) $audit['docs_affected']; ?></strong>
-					<span class="etm-stat-note">Documents with local values</span>
+					<span class="etm-stat-note"><?php echo esc_html__( 'Documents with local values', 'typeoverride' ); ?></span>
 				</div>
 				<div class="etm-stat">
-					<span class="etm-stat-label">Local Overrides</span>
+					<span class="etm-stat-label"><?php echo esc_html__( 'Local Overrides', 'typeoverride' ); ?></span>
 					<strong class="etm-stat-value"><?php echo (int) $audit['override_count']; ?></strong>
-					<span class="etm-stat-note">Explicit values found</span>
+					<span class="etm-stat-note"><?php echo esc_html__( 'Explicit values found', 'typeoverride' ); ?></span>
 				</div>
 				<?php if ( $audit['skipped_count'] > 0 ) : ?>
 					<div class="etm-stat etm-stat-attention">
-						<span class="etm-stat-label">Needs Attention</span>
+						<span class="etm-stat-label"><?php echo esc_html__( 'Needs Attention', 'typeoverride' ); ?></span>
 						<strong class="etm-stat-value"><?php echo (int) $audit['skipped_count']; ?></strong>
-						<span class="etm-stat-note">Documents skipped safely</span>
+						<span class="etm-stat-note"><?php echo esc_html__( 'Documents skipped safely', 'typeoverride' ); ?></span>
 					</div>
 				<?php endif; ?>
 			</div>
-			<div class="etm-category-summary" aria-label="Overrides by typography category">
+			<div class="etm-category-summary" aria-label="<?php echo esc_attr__( 'Overrides by typography category', 'typeoverride' ); ?>">
 				<?php foreach ( $audit['group_counts'] as $group => $count ) : ?>
 					<span class="etm-count-chip"><span><?php echo esc_html( $this->group_label( $group ) ); ?></span><strong><?php echo (int) $count; ?></strong></span>
 				<?php endforeach; ?>
@@ -356,33 +378,45 @@ class ETM_Admin {
 		<section class="etm-results" aria-labelledby="etm-results-title">
 			<div class="etm-section-heading">
 				<div>
-					<p class="etm-eyebrow">Findings</p>
-					<h2 id="etm-results-title">Affected documents</h2>
+					<p class="etm-eyebrow"><?php echo esc_html__( 'Findings', 'typeoverride' ); ?></p>
+					<h2 id="etm-results-title"><?php echo esc_html__( 'Affected documents', 'typeoverride' ); ?></h2>
 				</div>
-				<span class="etm-section-count"><?php echo (int) $audit['docs_affected']; ?> document(s)</span>
+				<span class="etm-section-count"><?php echo esc_html( $affected_documents_label ); ?></span>
 			</div>
 			<div class="etm-document-list">
 				<?php foreach ( $audit['documents'] as $document ) : ?>
+					<?php
+					$document_count_label = sprintf(
+						/* translators: %d: number of overrides in the document. */
+						_n( '%d override', '%d overrides', (int) $document['count'], 'typeoverride' ),
+						(int) $document['count']
+					);
+					$document_caption = sprintf(
+						/* translators: %s: document title. */
+						__( 'Typography overrides for %s', 'typeoverride' ),
+						$document['title']
+					);
+					?>
 					<details class="etm-document">
 						<summary>
 							<span class="etm-document-heading">
 								<strong><?php echo esc_html( $document['title'] ); ?></strong>
 								<span><?php echo esc_html( $document['post_type'] ); ?> · ID <?php echo (int) $document['id']; ?></span>
 							</span>
-							<span class="etm-document-count"><?php echo (int) $document['count']; ?> override<?php echo 1 === (int) $document['count'] ? '' : 's'; ?></span>
+							<span class="etm-document-count"><?php echo esc_html( $document_count_label ); ?></span>
 						</summary>
 						<div class="etm-document-body">
 							<table class="etm-override-table">
-								<caption class="screen-reader-text">Typography overrides for <?php echo esc_html( $document['title'] ); ?></caption>
+								<caption class="screen-reader-text"><?php echo esc_html( $document_caption ); ?></caption>
 								<thead>
-									<tr><th scope="col">Property</th><th scope="col">Context</th><th scope="col">Current Value</th></tr>
+									<tr><th scope="col"><?php echo esc_html__( 'Property', 'typeoverride' ); ?></th><th scope="col"><?php echo esc_html__( 'Context', 'typeoverride' ); ?></th><th scope="col"><?php echo esc_html__( 'Current Value', 'typeoverride' ); ?></th></tr>
 								</thead>
 								<tbody>
 									<?php foreach ( $document['overrides'] as $override ) : ?>
 										<tr>
-											<td data-label="Property"><strong><?php echo esc_html( $this->group_label( $override['group'] ) ); ?></strong></td>
-											<td data-label="Context"><?php echo esc_html( $override['context'] ); ?></td>
-											<td data-label="Current Value"><code class="etm-value" title="<?php echo esc_attr( $override['key'] ); ?>"><?php echo esc_html( $this->format_value( $override['value'] ) ); ?></code></td>
+											<td data-label="<?php echo esc_attr__( 'Property', 'typeoverride' ); ?>"><strong><?php echo esc_html( $this->group_label( $override['group'] ) ); ?></strong></td>
+											<td data-label="<?php echo esc_attr__( 'Context', 'typeoverride' ); ?>"><?php echo esc_html( $override['context'] ); ?></td>
+											<td data-label="<?php echo esc_attr__( 'Current Value', 'typeoverride' ); ?>"><code class="etm-value" title="<?php echo esc_attr( $override['key'] ); ?>"><?php echo esc_html( $this->format_value( $override['value'] ) ); ?></code></td>
 										</tr>
 									<?php endforeach; ?>
 								</tbody>
@@ -410,6 +444,7 @@ class ETM_Admin {
 				'post_type'      => 'any',
 				'post_status'    => array( 'publish', 'pending', 'draft', 'future', 'private' ),
 				'posts_per_page' => -1,
+				'no_found_rows'  => true,
 				'meta_query'     => array(
 					array(
 						'key'     => '_elementor_data',
@@ -470,9 +505,9 @@ class ETM_Admin {
 	private function render_reset_tab() {
 		?>
 		<section class="etm-intro" aria-labelledby="etm-reset-title">
-			<p class="etm-eyebrow">Reset Overrides</p>
-			<h2 id="etm-reset-title">Reset local typography overrides</h2>
-			<p>Remove selected explicit local Elementor values so those properties can return to Elementor's Default or inherited behavior.</p>
+			<p class="etm-eyebrow"><?php echo esc_html__( 'Reset Overrides', 'typeoverride' ); ?></p>
+			<h2 id="etm-reset-title"><?php echo esc_html__( 'Reset local typography overrides', 'typeoverride' ); ?></h2>
+			<p><?php echo esc_html__( "Remove selected explicit local Elementor values so those properties can return to Elementor's Default or inherited behavior.", 'typeoverride' ); ?></p>
 		</section>
 
 		<?php $this->render_protection_panel(); ?>
@@ -482,8 +517,8 @@ class ETM_Admin {
 			<input type="hidden" name="etm_action" value="reset_overrides">
 
 			<fieldset class="etm-category-fieldset">
-				<legend class="etm-section-title">Choose typography properties</legend>
-				<p class="etm-section-description">Only the properties you select will be cleared. Responsive variants are included when they match the same property.</p>
+				<legend class="etm-section-title"><?php echo esc_html__( 'Choose typography properties', 'typeoverride' ); ?></legend>
+				<p class="etm-section-description"><?php echo esc_html__( 'Only the properties you select will be cleared. Responsive variants are included when they match the same property.', 'typeoverride' ); ?></p>
 				<div class="etm-category-grid">
 					<?php foreach ( ETM_Matcher::get_groups() as $group_id => $identifier ) : ?>
 						<?php $label = $this->group_label( $group_id ); ?>
@@ -491,7 +526,7 @@ class ETM_Admin {
 							<input class="etm-category-checkbox" type="checkbox" id="etm-group-<?php echo esc_attr( $group_id ); ?>" name="reset_groups[]" value="<?php echo esc_attr( $group_id ); ?>" data-group-label="<?php echo esc_attr( $label ); ?>">
 							<span class="etm-category-copy">
 								<strong><?php echo esc_html( $label ); ?></strong>
-								<span>Remove explicit local values</span>
+								<span><?php echo esc_html__( 'Remove explicit local values', 'typeoverride' ); ?></span>
 							</span>
 						</label>
 					<?php endforeach; ?>
@@ -499,30 +534,30 @@ class ETM_Admin {
 			</fieldset>
 
 			<div class="etm-selection-toolbar">
-				<div class="etm-selection-tools" aria-label="Selection tools">
-					<button type="button" class="etm-button etm-button-secondary" data-etm-select-all>Select all</button>
-					<button type="button" class="etm-button etm-button-secondary" data-etm-clear-selection>Clear selection</button>
+				<div class="etm-selection-tools" aria-label="<?php echo esc_attr__( 'Selection tools', 'typeoverride' ); ?>">
+					<button type="button" class="etm-button etm-button-secondary" data-etm-select-all><?php echo esc_html__( 'Select all', 'typeoverride' ); ?></button>
+					<button type="button" class="etm-button etm-button-secondary" data-etm-clear-selection><?php echo esc_html__( 'Clear selection', 'typeoverride' ); ?></button>
 				</div>
 				<div class="etm-selection-status" role="status" aria-live="polite">
-					<strong data-etm-selection-count>0 selected</strong>
-					<span data-etm-selection-help>Select one or more typography properties to continue.</span>
+					<strong data-etm-selection-count>0 <?php echo esc_html__( 'selected', 'typeoverride' ); ?></strong>
+					<span data-etm-selection-help><?php echo esc_html__( 'Select one or more typography properties to continue.', 'typeoverride' ); ?></span>
 				</div>
 			</div>
 
 			<div class="etm-form-actions">
-				<button type="submit" class="etm-button etm-button-primary" data-etm-review aria-controls="etm-review-panel" disabled>Review reset</button>
+				<button type="submit" class="etm-button etm-button-primary" data-etm-review aria-controls="etm-review-panel" disabled><?php echo esc_html__( 'Review reset', 'typeoverride' ); ?></button>
 			</div>
 
 			<section id="etm-review-panel" class="etm-review-panel" data-etm-review-panel hidden aria-labelledby="etm-review-title">
 				<div>
-					<p class="etm-eyebrow">Final review</p>
-					<h2 id="etm-review-title">You are about to reset:</h2>
+					<p class="etm-eyebrow"><?php echo esc_html__( 'Final review', 'typeoverride' ); ?></p>
+					<h2 id="etm-review-title"><?php echo esc_html__( 'You are about to reset:', 'typeoverride' ); ?></h2>
 					<ul class="etm-review-list" data-etm-review-list></ul>
 				</div>
-				<p class="etm-review-copy">The selected explicit local values will be cleared across eligible Elementor documents. Global Typography, the active Kit, and unselected properties remain protected.</p>
+				<p class="etm-review-copy"><?php echo esc_html__( 'The selected explicit local values will be cleared across eligible Elementor documents. Global Typography, the active Kit, and unselected properties remain protected.', 'typeoverride' ); ?></p>
 				<div class="etm-form-actions etm-review-actions">
-					<button type="submit" class="etm-button etm-button-danger" data-etm-confirm hidden>Reset selected overrides</button>
-					<button type="button" class="etm-button etm-button-secondary" data-etm-cancel>Cancel</button>
+					<button type="submit" class="etm-button etm-button-danger" data-etm-confirm hidden><?php echo esc_html__( 'Reset selected overrides', 'typeoverride' ); ?></button>
+					<button type="button" class="etm-button etm-button-secondary" data-etm-cancel><?php echo esc_html__( 'Cancel', 'typeoverride' ); ?></button>
 				</div>
 			</section>
 		</form>
@@ -533,25 +568,47 @@ class ETM_Admin {
 		?>
 		<section class="etm-panel etm-protection-panel" aria-labelledby="etm-protection-title">
 			<div>
-				<p class="etm-eyebrow">Safety boundary</p>
-				<h2 id="etm-protection-title">What remains protected</h2>
+				<p class="etm-eyebrow"><?php echo esc_html__( 'Safety boundary', 'typeoverride' ); ?></p>
+				<h2 id="etm-protection-title"><?php echo esc_html__( 'What remains protected', 'typeoverride' ); ?></h2>
 			</div>
 			<ul class="etm-protection-list">
-				<li><span aria-hidden="true">✓</span> Global Typography is not deleted</li>
-				<li><span aria-hidden="true">✓</span> Elementor's active Kit is protected</li>
-				<li><span aria-hidden="true">✓</span> Unselected typography properties remain unchanged</li>
-				<li><span aria-hidden="true">✓</span> Original Elementor document data is backed up before modification</li>
+				<li><span aria-hidden="true">✓</span> <?php echo esc_html__( 'Global Typography is not deleted', 'typeoverride' ); ?></li>
+				<li><span aria-hidden="true">✓</span> <?php echo esc_html__( "Elementor's active Kit is protected", 'typeoverride' ); ?></li>
+				<li><span aria-hidden="true">✓</span> <?php echo esc_html__( 'Unselected typography properties remain unchanged', 'typeoverride' ); ?></li>
+				<li><span aria-hidden="true">✓</span> <?php echo esc_html__( 'Original Elementor document data is backed up before modification', 'typeoverride' ); ?></li>
 			</ul>
 		</section>
 		<?php
 	}
 
 	private function group_label( $group_id ) {
-		return isset( $this->group_labels[ $group_id ] ) ? $this->group_labels[ $group_id ] : ucwords( str_replace( '_', ' ', $group_id ) );
+		$labels = array(
+			'font_family'     => __( 'Font Family', 'typeoverride' ),
+			'font_size'       => __( 'Font Size', 'typeoverride' ),
+			'font_weight'     => __( 'Font Weight', 'typeoverride' ),
+			'text_transform'  => __( 'Text Transform', 'typeoverride' ),
+			'font_style'      => __( 'Font Style', 'typeoverride' ),
+			'text_decoration' => __( 'Text Decoration', 'typeoverride' ),
+			'line_height'     => __( 'Line Height', 'typeoverride' ),
+			'letter_spacing'  => __( 'Letter Spacing', 'typeoverride' ),
+			'word_spacing'    => __( 'Word Spacing', 'typeoverride' ),
+		);
+
+		return isset( $labels[ $group_id ] ) ? $labels[ $group_id ] : ucwords( str_replace( '_', ' ', $group_id ) );
 	}
 
 	private function format_breakpoint_label( $breakpoint ) {
-		return ucwords( str_replace( '_', ' ', (string) $breakpoint ) );
+		$labels = array(
+			'tablet'       => __( 'Tablet', 'typeoverride' ),
+			'mobile'       => __( 'Mobile', 'typeoverride' ),
+			'widescreen'   => __( 'Widescreen', 'typeoverride' ),
+			'laptop'       => __( 'Laptop', 'typeoverride' ),
+			'tablet_extra' => __( 'Tablet Extra', 'typeoverride' ),
+			'mobile_extra' => __( 'Mobile Extra', 'typeoverride' ),
+		);
+		$breakpoint = (string) $breakpoint;
+
+		return isset( $labels[ $breakpoint ] ) ? $labels[ $breakpoint ] : ucwords( str_replace( '_', ' ', $breakpoint ) );
 	}
 
 	private function post_type_label( $post ) {
@@ -575,7 +632,7 @@ class ETM_Admin {
 			}
 
 			$encoded = wp_json_encode( $value );
-			return false === $encoded ? print_r( $value, true ) : $encoded;
+			return false === $encoded ? __( 'Unable to display value.', 'typeoverride' ) : $encoded;
 		}
 
 		if ( is_bool( $value ) ) {

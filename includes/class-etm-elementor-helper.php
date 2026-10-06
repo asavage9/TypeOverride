@@ -2,7 +2,7 @@
 /**
  * Elementor integration helpers.
  *
- * @package ElementorTypographyManager
+ * @package TypeOverride
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

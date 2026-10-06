@@ -2,7 +2,7 @@
 /**
  * Elementor data resetter.
  *
- * @package ElementorTypographyManager
+ * @package TypeOverride
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,14 +25,14 @@ class ETM_Resetter {
 		if ( empty( $selected_groups ) ) {
 			return array(
 				'success' => false,
-				'error'   => 'No valid groups selected for reset.',
+				'error'   => __( 'No valid groups selected for reset.', 'typeoverride' ),
 			);
 		}
 
 		if ( ETM_Elementor_Helper::is_active_kit( $post_id ) ) {
 			return array(
 				'success' => false,
-				'error'   => 'Active Elementor Kit cannot be reset.',
+				'error'   => __( 'Active Elementor Kit cannot be reset.', 'typeoverride' ),
 			);
 		}
 
@@ -40,7 +40,7 @@ class ETM_Resetter {
 		if ( ! is_string( $raw_data ) || '' === $raw_data ) {
 			return array(
 				'success' => false,
-				'error'   => 'No Elementor data found.',
+				'error'   => __( 'No Elementor data found.', 'typeoverride' ),
 			);
 		}
 
@@ -48,7 +48,7 @@ class ETM_Resetter {
 		if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $data ) ) {
 			return array(
 				'success' => false,
-				'error'   => 'Malformed Elementor data.',
+				'error'   => __( 'Malformed Elementor data.', 'typeoverride' ),
 			);
 		}
 
@@ -60,7 +60,7 @@ class ETM_Resetter {
 			if ( false === $new_raw_data ) {
 				return array(
 					'success' => false,
-					'error'   => 'Unable to encode modified Elementor data.',
+					'error'   => __( 'Unable to encode modified Elementor data.', 'typeoverride' ),
 				);
 			}
 

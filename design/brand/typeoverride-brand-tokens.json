@@ -1,0 +1,18 @@
+{
+  "product": "TypeOverride",
+  "colors": {
+    "navy": "#17233A",
+    "orange": "#F58220",
+    "indigo_ui_accent": "#4355C5",
+    "guide_blue_gray": "#A8B8D0",
+    "off_white": "#F7F8FA",
+    "charcoal": "#1D2327"
+  },
+  "usage": {
+    "navy": "Primary typography mark / wordmark",
+    "orange": "Local override emphasis",
+    "indigo_ui_accent": "Plugin UI active/selected states",
+    "guide_blue_gray": "Typography measurement guides",
+    "charcoal": "Monochrome/admin icon"
+  }
+}

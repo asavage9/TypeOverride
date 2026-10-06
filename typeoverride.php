@@ -3,10 +3,15 @@
  * Plugin Name: TypeOverride
  * Description: Find and reset local typography overrides in Elementor.
  * Version: 0.2.0
+ * Requires at least: 6.8
+ * Requires PHP: 7.4
  * Author: Anthony Savage
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: typeoverride
+ * Requires Plugins: elementor
  *
- * @package ElementorTypographyManager
+ * @package TypeOverride
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -54,7 +59,7 @@ class ETM_Typography_Manager {
 
 		?>
 		<div class="notice notice-error">
-			<p><strong>TypeOverride</strong> requires Elementor to be installed and active to function.</p>
+			<p><strong><?php echo esc_html__( 'TypeOverride', 'typeoverride' ); ?></strong> <?php echo esc_html__( 'requires Elementor to be installed and active to function.', 'typeoverride' ); ?></p>
 		</div>
 		<?php
 	}
