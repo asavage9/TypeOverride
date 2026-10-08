@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ETM_Matcher {
+class TypeOverride_Matcher {
 
 	private static $typography_groups = array(
 		'font_family'    => '_font_family',

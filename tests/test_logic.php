@@ -51,10 +51,10 @@ namespace {
     \Elementor\Plugin::$instance = new \Elementor\Plugin();
 
     // Load classes
-    require_once __DIR__ . '/../includes/class-etm-elementor-helper.php';
-    require_once __DIR__ . '/../includes/class-etm-matcher.php';
-    require_once __DIR__ . '/../includes/class-etm-scanner.php';
-    require_once __DIR__ . '/../includes/class-etm-resetter.php';
+    require_once __DIR__ . '/../includes/class-typeoverride-elementor-helper.php';
+    require_once __DIR__ . '/../includes/class-typeoverride-matcher.php';
+    require_once __DIR__ . '/../includes/class-typeoverride-scanner.php';
+    require_once __DIR__ . '/../includes/class-typeoverride-resetter.php';
 
 $mock_db = array();
 
@@ -76,7 +76,7 @@ $structured_data = array(
 );
 $mock_db[1]['_elementor_data'] = json_encode( $structured_data );
 
-$res = ETM_Resetter::reset_document( 1, array( 'font_size' ) );
+$res = TypeOverride_Resetter::reset_document( 1, array( 'font_size' ) );
 $updated_raw = get_post_meta( 1, '_elementor_data', true );
 $updated_data = json_decode( $updated_raw, true );
 
@@ -99,7 +99,7 @@ $responsive_data = array(
 );
 $mock_db[2]['_elementor_data'] = json_encode( $responsive_data );
 
-$res = ETM_Resetter::reset_document( 2, array( 'font_size' ) );
+$res = TypeOverride_Resetter::reset_document( 2, array( 'font_size' ) );
 $updated_raw = get_post_meta( 2, '_elementor_data', true );
 $updated_data = json_decode( $updated_raw, true );
 
@@ -123,7 +123,7 @@ $false_positive_data = array(
 );
 $mock_db[3]['_elementor_data'] = json_encode( $false_positive_data );
 
-$res = ETM_Resetter::reset_document( 3, array( 'font_size' ) );
+$res = TypeOverride_Resetter::reset_document( 3, array( 'font_size' ) );
 $updated_raw = get_post_meta( 3, '_elementor_data', true );
 $updated_data = json_decode( $updated_raw, true );
 
@@ -148,7 +148,7 @@ $prefix_data = array(
 );
 $mock_db[4]['_elementor_data'] = json_encode( $prefix_data );
 
-$res = ETM_Resetter::reset_document( 4, array( 'font_size' ) );
+$res = TypeOverride_Resetter::reset_document( 4, array( 'font_size' ) );
 $updated_raw = get_post_meta( 4, '_elementor_data', true );
 $updated_data = json_decode( $updated_raw, true );
 
@@ -178,7 +178,7 @@ $global_data = array(
 $mock_db[5]['_elementor_data'] = json_encode( $global_data );
 
 // Audit check
-$overrides = ETM_Scanner::audit_document( $global_data );
+$overrides = TypeOverride_Scanner::audit_document( $global_data );
 $found_globals = 0;
 foreach ( $overrides as $o ) {
     if ( strpos( $o['key'], '__globals__' ) !== false ) {
@@ -187,7 +187,7 @@ foreach ( $overrides as $o ) {
 }
 
 // Reset check
-$res = ETM_Resetter::reset_document( 5, array( 'font_family', 'font_size' ) );
+$res = TypeOverride_Resetter::reset_document( 5, array( 'font_family', 'font_size' ) );
 $updated_raw = get_post_meta( 5, '_elementor_data', true );
 $updated_data = json_decode( $updated_raw, true );
 
@@ -202,10 +202,10 @@ if ( $found_globals === 0 &&
 
 // TEST 6: Shared Responsive Context Matching
 echo "Test 6: Shared Responsive Context Matching... ";
-$context_base = ETM_Matcher::get_breakpoint_from_key( 'title_typography_font_size' );
-$context_tablet = ETM_Matcher::get_breakpoint_from_key( 'title_typography_font_size_tablet' );
-$context_mobile = ETM_Matcher::get_breakpoint_from_key( 'title_typography_font_size_mobile' );
-$context_arbitrary = ETM_Matcher::get_breakpoint_from_key( 'title_typography_font_size_custom' );
+$context_base = TypeOverride_Matcher::get_breakpoint_from_key( 'title_typography_font_size' );
+$context_tablet = TypeOverride_Matcher::get_breakpoint_from_key( 'title_typography_font_size_tablet' );
+$context_mobile = TypeOverride_Matcher::get_breakpoint_from_key( 'title_typography_font_size_mobile' );
+$context_arbitrary = TypeOverride_Matcher::get_breakpoint_from_key( 'title_typography_font_size_custom' );
 
 if ( false === $context_base && 'tablet' === $context_tablet && 'mobile' === $context_mobile && false === $context_arbitrary ) {
     echo "PASS\n";

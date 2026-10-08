@@ -4,7 +4,7 @@
 	var __ = wp.i18n.__;
 
 	function initResetForm() {
-		var form = document.querySelector('[data-etm-reset-form]');
+		var form = document.querySelector('[data-typeoverride-reset-form]');
 
 		if (!form) {
 			return;
@@ -13,15 +13,15 @@
 		var checkboxes = Array.prototype.slice.call(
 			form.querySelectorAll('input[type="checkbox"][name="reset_groups[]"]')
 		);
-		var reviewButton = form.querySelector('[data-etm-review]');
-		var confirmButton = form.querySelector('[data-etm-confirm]');
-		var cancelButton = form.querySelector('[data-etm-cancel]');
-		var reviewPanel = form.querySelector('[data-etm-review-panel]');
-		var reviewList = form.querySelector('[data-etm-review-list]');
-		var countLabel = form.querySelector('[data-etm-selection-count]');
-		var helpLabel = form.querySelector('[data-etm-selection-help]');
-		var selectAllButton = form.querySelector('[data-etm-select-all]');
-		var clearButton = form.querySelector('[data-etm-clear-selection]');
+		var reviewButton = form.querySelector('[data-typeoverride-review]');
+		var confirmButton = form.querySelector('[data-typeoverride-confirm]');
+		var cancelButton = form.querySelector('[data-typeoverride-cancel]');
+		var reviewPanel = form.querySelector('[data-typeoverride-review-panel]');
+		var reviewList = form.querySelector('[data-typeoverride-review-list]');
+		var countLabel = form.querySelector('[data-typeoverride-selection-count]');
+		var helpLabel = form.querySelector('[data-typeoverride-selection-help]');
+		var selectAllButton = form.querySelector('[data-typeoverride-select-all]');
+		var clearButton = form.querySelector('[data-typeoverride-clear-selection]');
 
 		function getSelected() {
 			return checkboxes.filter(function (checkbox) {
@@ -33,7 +33,7 @@
 			var selected = getSelected();
 
 			checkboxes.forEach(function (checkbox) {
-				var card = checkbox.closest('.etm-category-card');
+				var card = checkbox.closest('.typeoverride-category-card');
 				if (card) {
 					card.classList.toggle('is-selected', checkbox.checked);
 				}
@@ -59,7 +59,7 @@
 				return;
 			}
 
-			form.setAttribute('data-etm-stage', 'review');
+			form.setAttribute('data-typeoverride-stage', 'review');
 			reviewButton.hidden = true;
 			confirmButton.hidden = false;
 			cancelButton.hidden = false;
@@ -88,7 +88,7 @@
 		});
 
 		form.addEventListener('submit', function (event) {
-			if (form.getAttribute('data-etm-stage') === 'confirmed') {
+			if (form.getAttribute('data-typeoverride-stage') === 'confirmed') {
 				return;
 			}
 
@@ -97,11 +97,11 @@
 		});
 
 		confirmButton.addEventListener('click', function () {
-			form.setAttribute('data-etm-stage', 'confirmed');
+			form.setAttribute('data-typeoverride-stage', 'confirmed');
 		});
 
 		cancelButton.addEventListener('click', function () {
-			form.setAttribute('data-etm-stage', 'selection');
+			form.setAttribute('data-typeoverride-stage', 'selection');
 			reviewPanel.hidden = true;
 			reviewButton.hidden = false;
 			confirmButton.hidden = true;

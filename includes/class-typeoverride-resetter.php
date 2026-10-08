@@ -9,12 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ETM_Resetter {
+class TypeOverride_Resetter {
 
-	private static $backup_key = '_etm_elementor_data_backup';
+	private static $backup_key = '_typeoverride_elementor_data_backup';
 
 	public static function reset_document( $post_id, $selected_groups = array() ) {
-		$allowed_groups = array_keys( ETM_Matcher::get_groups() );
+		$allowed_groups = array_keys( TypeOverride_Matcher::get_groups() );
 		$selected_groups = array_values(
 			array_intersect(
 				array_map( 'sanitize_key', (array) $selected_groups ),
@@ -29,7 +29,7 @@ class ETM_Resetter {
 			);
 		}
 
-		if ( ETM_Elementor_Helper::is_active_kit( $post_id ) ) {
+		if ( TypeOverride_Elementor_Helper::is_active_kit( $post_id ) ) {
 			return array(
 				'success' => false,
 				'error'   => __( 'Active Elementor Kit cannot be reset.', 'typeoverride' ),
@@ -85,7 +85,7 @@ class ETM_Resetter {
 				continue;
 			}
 
-			$group_id = ETM_Matcher::get_group_from_key( $key );
+			$group_id = TypeOverride_Matcher::get_group_from_key( $key );
 			if ( $group_id && in_array( $group_id, $selected_groups, true ) ) {
 				if ( self::is_explicit_override( $value ) ) {
 					// Clear the complete control value atomically.

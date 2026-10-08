@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ETM_Elementor_Helper {
+class TypeOverride_Elementor_Helper {
 
 	public static function get_active_kit_id() {
 		if ( ! class_exists( '\Elementor\Plugin' ) || ! isset( \Elementor\Plugin::$instance ) ) {

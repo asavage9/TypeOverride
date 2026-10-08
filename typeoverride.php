@@ -19,11 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if ( ! defined( 'ETM_VERSION' ) ) {
-	define( 'ETM_VERSION', '0.2.0' );
+if ( ! defined( 'TYPEOVERRIDE_VERSION' ) ) {
+	define( 'TYPEOVERRIDE_VERSION', '0.2.0' );
 }
 
-class ETM_Typography_Manager {
+class TypeOverride_Typography_Manager {
 
 	private static $instance = null;
 
@@ -36,11 +36,11 @@ class ETM_Typography_Manager {
 	}
 
 	private function __construct() {
-		require_once plugin_dir_path( __FILE__ ) . 'includes/class-etm-elementor-helper.php';
-		require_once plugin_dir_path( __FILE__ ) . 'includes/class-etm-matcher.php';
-		require_once plugin_dir_path( __FILE__ ) . 'includes/class-etm-scanner.php';
-		require_once plugin_dir_path( __FILE__ ) . 'includes/class-etm-resetter.php';
-		require_once plugin_dir_path( __FILE__ ) . 'includes/class-etm-admin.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-typeoverride-elementor-helper.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-typeoverride-matcher.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-typeoverride-scanner.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-typeoverride-resetter.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-typeoverride-admin.php';
 
 		add_action( 'plugins_loaded', array( $this, 'boot' ) );
 	}
@@ -50,7 +50,7 @@ class ETM_Typography_Manager {
 			add_action( 'admin_notices', array( $this, 'elementor_inactive_notice' ) );
 		}
 
-		new ETM_Admin();
+		new TypeOverride_Admin();
 	}
 
 	public function elementor_inactive_notice() {
@@ -66,4 +66,4 @@ class ETM_Typography_Manager {
 	}
 }
 
-ETM_Typography_Manager::get_instance();
+TypeOverride_Typography_Manager::get_instance();

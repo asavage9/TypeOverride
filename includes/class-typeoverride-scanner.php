@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ETM_Scanner {
+class TypeOverride_Scanner {
 
 	public static function audit_document( $data, $selected_groups = array() ) {
 		$overrides = array();
@@ -29,7 +29,7 @@ class ETM_Scanner {
 				continue;
 			}
 
-			$group_id = ETM_Matcher::get_group_from_key( $key );
+			$group_id = TypeOverride_Matcher::get_group_from_key( $key );
 			if ( $group_id ) {
 				if (
 					( empty( $selected_groups ) || in_array( $group_id, $selected_groups, true ) )
