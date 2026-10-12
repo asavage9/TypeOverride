@@ -64,8 +64,32 @@ class TypeOverride_Resetter {
 				);
 			}
 
-			self::create_backup( $post_id, $raw_data );
-			update_post_meta( $post_id, '_elementor_data', $new_raw_data );
+			$validated_data = json_decode( $new_raw_data, true );
+			if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $validated_data ) ) {
+				return array(
+					'success' => false,
+					'error'   => __( 'Unable to validate modified Elementor data. No reset was performed.', 'typeoverride' ),
+				);
+			}
+
+			if ( self::get_preserved_snapshot( $data, $selected_groups ) !== self::get_preserved_snapshot( $validated_data, $selected_groups ) ) {
+				return array(
+					'success' => false,
+					'error'   => __( 'Modified Elementor data changed protected document fields. No reset was performed.', 'typeoverride' ),
+				);
+			}
+
+			if ( ! self::create_backup( $post_id, $raw_data ) ) {
+				return array(
+					'success' => false,
+					'error'   => __( 'Unable to create or verify the Elementor data backup. No reset was performed.', 'typeoverride' ),
+				);
+			}
+
+			$persist_result = self::persist_document( $post_id, $raw_data, $new_raw_data );
+			if ( ! $persist_result['success'] ) {
+				return $persist_result;
+			}
 		}
 
 		return array(
@@ -120,9 +144,71 @@ class TypeOverride_Resetter {
 		return true;
 	}
 
-	private static function create_backup( $post_id, $raw_data ) {
-		if ( ! get_post_meta( $post_id, self::$backup_key, true ) ) {
-			update_post_meta( $post_id, self::$backup_key, $raw_data );
+	private static function get_preserved_snapshot( $data, $selected_groups ) {
+		if ( ! is_array( $data ) ) {
+			return $data;
 		}
+
+		$snapshot = array();
+		foreach ( $data as $key => $value ) {
+			if ( '__globals__' !== $key ) {
+				$group_id = TypeOverride_Matcher::get_group_from_key( $key );
+				if ( $group_id && in_array( $group_id, $selected_groups, true ) ) {
+					continue;
+				}
+			}
+
+			$snapshot[ $key ] = is_array( $value ) ? self::get_preserved_snapshot( $value, $selected_groups ) : $value;
+		}
+
+		return $snapshot;
+	}
+
+	private static function create_backup( $post_id, $raw_data ) {
+		if ( metadata_exists( 'post', $post_id, self::$backup_key ) ) {
+			$existing_backup = get_post_meta( $post_id, self::$backup_key, true );
+			$existing_backup_data = is_string( $existing_backup ) ? json_decode( $existing_backup, true ) : false;
+
+			return is_string( $existing_backup )
+				&& '' !== $existing_backup
+				&& JSON_ERROR_NONE === json_last_error()
+				&& is_array( $existing_backup_data );
+		}
+
+		$write_result = update_post_meta( $post_id, self::$backup_key, wp_slash( $raw_data ) );
+		$stored_backup = get_post_meta( $post_id, self::$backup_key, true );
+
+		return false !== $write_result
+			&& is_string( $stored_backup )
+			&& $raw_data === $stored_backup;
+	}
+
+	private static function persist_document( $post_id, $raw_data, $new_raw_data ) {
+		$write_result = update_post_meta( $post_id, '_elementor_data', wp_slash( $new_raw_data ) );
+		$saved_raw_data = get_post_meta( $post_id, '_elementor_data', true );
+
+		if ( false !== $write_result && is_string( $saved_raw_data ) && $new_raw_data === $saved_raw_data ) {
+			$validated_saved_data = json_decode( $saved_raw_data, true );
+			if ( JSON_ERROR_NONE === json_last_error() && is_array( $validated_saved_data ) ) {
+				return array(
+					'success'     => true,
+					'reset_count' => 0,
+				);
+			}
+		}
+
+		update_post_meta( $post_id, '_elementor_data', wp_slash( $raw_data ) );
+		$restored_raw_data = get_post_meta( $post_id, '_elementor_data', true );
+		if ( $raw_data !== $restored_raw_data ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Unable to verify the reset or restore the original Elementor data. No reset was recorded.', 'typeoverride' ),
+			);
+		}
+
+		return array(
+			'success' => false,
+			'error'   => __( 'Unable to verify the saved Elementor data. The original data was restored and no reset was recorded.', 'typeoverride' ),
+		);
 	}
 }

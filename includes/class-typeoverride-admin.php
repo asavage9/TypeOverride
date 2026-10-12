@@ -13,7 +13,7 @@ class TypeOverride_Admin {
 
 	private $page_slug = 'typeoverride';
 
-	private $version = '0.2.0';
+	private $version = '0.2.1';
 
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
@@ -141,17 +141,20 @@ class TypeOverride_Admin {
 			}
 
 			$result = TypeOverride_Resetter::reset_document( $post->ID, $selected_groups );
-			if ( ! $result['success'] ) {
+			if ( ! is_array( $result ) || empty( $result['success'] ) ) {
+				$error = is_array( $result ) && ! empty( $result['error'] )
+					? $result['error']
+					: __( 'The reset failed safely. No changes were recorded.', 'typeoverride' );
 				$results['errors'][] = sprintf(
 					/* translators: 1: document ID, 2: error message. */
 					__( 'Doc ID %1$d: %2$s', 'typeoverride' ),
 					(int) $post->ID,
-					$result['error']
+					$error
 				);
 				continue;
 			}
 
-			if ( $result['reset_count'] > 0 ) {
+			if ( ! empty( $result['reset_count'] ) ) {
 				$results['modified_docs']++;
 				$results['reset_count'] += $result['reset_count'];
 			}
