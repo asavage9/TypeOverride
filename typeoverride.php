@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TypeOverride
  * Description: Find and reset local typography overrides in Elementor.
- * Version: 0.2.1
+ * Version: 0.2.2
  * Requires at least: 6.8
  * Requires PHP: 7.4
  * Author: Savage Creative
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'TYPEOVERRIDE_VERSION' ) ) {
-	define( 'TYPEOVERRIDE_VERSION', '0.2.1' );
+	define( 'TYPEOVERRIDE_VERSION', '0.2.2' );
 }
 
 class TypeOverride_Typography_Manager {

@@ -13,7 +13,7 @@ class TypeOverride_Admin {
 
 	private $page_slug = 'typeoverride';
 
-	private $version = '0.2.1';
+	private $version = '0.2.2';
 
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
@@ -22,17 +22,31 @@ class TypeOverride_Admin {
 	}
 
 	public function add_menu_page() {
-		$plugin_file = dirname( __DIR__ ) . '/typeoverride.php';
-
 		add_menu_page(
 			__( 'TypeOverride', 'typeoverride' ),
 			__( 'TypeOverride', 'typeoverride' ),
 			'manage_options',
 			$this->page_slug,
 			array( $this, 'render_page' ),
-			plugins_url( 'admin/images/typeoverride-admin-menu.svg', $plugin_file ),
+			$this->get_menu_icon(),
 			80
 		);
+	}
+
+	private function get_menu_icon() {
+		$icon_path = dirname( __DIR__ ) . '/admin/images/typeoverride-admin-menu.svg';
+
+		if ( ! is_readable( $icon_path ) ) {
+			return 'dashicons-editor-textcolor';
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the packaged local SVG asset without introducing a runtime dependency.
+		$icon = file_get_contents( $icon_path );
+		if ( false === $icon || '' === trim( $icon ) ) {
+			return 'dashicons-editor-textcolor';
+		}
+
+		return 'data:image/svg+xml;base64,' . base64_encode( $icon );
 	}
 
 	public function enqueue_assets() {

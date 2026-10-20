@@ -3,7 +3,7 @@ Contributors: asavagecreative
 Tags: elementor, typography, fonts, design system, maintenance
 Requires at least: 6.8
 Tested up to: 7.1
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -62,7 +62,7 @@ Use this workflow:
 4. Choose Review reset.
 5. Confirm Reset selected overrides after reviewing the protected data boundaries.
 
-Reset Overrides modifies Elementor document data. The first mutation creates and verifies an original-data backup for that document. Version 0.2.1 does not provide an automated Restore screen.
+Reset Overrides modifies Elementor document data. The first mutation creates and verifies an original-data backup for that document. Version 0.2.2 does not provide an automated Restore screen.
 
 == Frequently Asked Questions ==
 
@@ -84,7 +84,7 @@ Yes. Registered Elementor responsive variants are recognized and reset as separa
 
 = Does TypeOverride back up Elementor data? =
 
-Yes. Before the first successful mutation of a document, TypeOverride stores and verifies the original Elementor document data. Version 0.2.1 does not provide an automated Restore screen.
+Yes. Before the first successful mutation of a document, TypeOverride stores and verifies the original Elementor document data. Version 0.2.2 does not provide an automated Restore screen.
 
 = Does TypeOverride require Elementor Pro? =
 
@@ -99,6 +99,10 @@ No. Core Audit and Reset Overrides operation is designed to work with Elementor.
 5. Reset completion summary.
 
 == Changelog ==
+
+= 0.2.2 =
+* Fix oversized WordPress admin menu icon when TypeOverride is inactive.
+* Improve admin menu icon visibility with native WordPress color scheme support.
 
 = 0.2.1 =
 * Correct Elementor metadata persistence by accounting for WordPress metadata unslashing.
